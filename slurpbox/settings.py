@@ -1,7 +1,26 @@
-username = 'Quasar@uams.edu'
-password = 'Theeyeofra1'
+import yaml
+from os.path import exists, expanduser
+from pprint import pprint
 
-destination = '/tmp/slurpbox'
 
-# The root WebDAV address; you probably don't want to change this
-root_path = 'https://dav.box.com/' 
+def find_config():
+    paths = [
+        './slurpbox.conf',
+        '~/.slurpboxrc',
+        '/etc/slurpbox/slurpbox.conf',
+    ]
+
+    for path in paths:
+        p = expanduser(path)
+        if exists(p):
+            return p
+
+    raise RuntimeError("No configuration file found")
+
+
+def load_config():
+    with open(find_config()) as inf:
+        return yaml.load(inf)
+
+
+SETTINGS = load_config()

@@ -1,8 +1,11 @@
 import pycurl
-import settings
+from .settings import SETTINGS
 from tqdm import tqdm
 
-LOGIN = f'{settings.username}:{settings.password}'
+LOGIN = ':'.join([
+    SETTINGS['remote']['username'],
+    SETTINGS['remote']['password'],
+])
 BAR = None
 BLAST = 0
 
@@ -28,7 +31,7 @@ def progress(download_t, download_d, upload_t, upload_d):
     BAR.update(diff)
 
 def PROPFIND(url_part, out_obj):
-    url = settings.root_path + url_part
+    url = SETTINGS['remote']['root_path'] + url_part
 
     c = pycurl.Curl()
     c.setopt(c.URL, url)
@@ -46,7 +49,7 @@ def download_file(url_part, out_obj):
     global BAR
     global BLAST
 
-    url = settings.root_path + url_part
+    url = SETTINGS['remote']['root_path'] + url_part
     # print(f"Downloading: {url}")
 
     c = pycurl.Curl()
