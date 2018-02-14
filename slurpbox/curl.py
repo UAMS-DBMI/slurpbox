@@ -2,12 +2,16 @@ import pycurl
 from .settings import SETTINGS
 from tqdm import tqdm
 
-LOGIN = ':'.join([
-    SETTINGS['remote']['username'],
-    SETTINGS['remote']['password'],
-])
+LOGIN = None
 BAR = None
 BLAST = 0
+
+def init_curl(username, password):
+    global LOGIN
+    LOGIN = ':'.join([
+        username,
+        password,
+    ])
 
 def header_func(header_line):
     header_line = header_line.decode('iso-8859-1') # from spec
@@ -23,10 +27,11 @@ def progress(download_t, download_d, upload_t, upload_d):
         if BAR is None:
             BAR = tqdm(total=download_t, unit='B', unit_scale=True)
 
-    # print(download_t, download_d)
+    # BAR.update(n) expects n to be the number of bytes since
+    # we last called it, however download_d is the total number of bytes
+    # downloaded, so we need to adjust it..
     diff = download_d - BLAST
     BLAST = download_d
-    # print(download_d, BLAST, diff)
 
     BAR.update(diff)
 
@@ -50,7 +55,6 @@ def download_file(url_part, out_obj):
     global BLAST
 
     url = SETTINGS['remote']['root_path'] + url_part
-    # print(f"Downloading: {url}")
 
     c = pycurl.Curl()
     c.setopt(c.URL, url)

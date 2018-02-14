@@ -8,11 +8,12 @@ from typing import NamedTuple
 from .xmlparse import process_xml
 from .hash import sha1sum_from_file
 from .util import format_sizeof
-from .curl import PROPFIND, download_file
+from .curl import PROPFIND, download_file, init_curl
 
-from .settings import SETTINGS
+from .settings import SETTINGS, load_settings_file, NoConfigFoundError
+from .messages import config_file_help
 
-DESTINATION = Path(SETTINGS['local']['destination'])
+DESTINATION = None
 
 
 class File(NamedTuple):
@@ -46,11 +47,6 @@ def try_a_hundred_times(file):
 def download_and_verify(file):
     full_filename = file.path
     short_filename = os.path.basename(full_filename)
-
-    # skip files that are not spreadsheets
-    # if 'xls' not in short_filename:
-    #     print(f"Skipping {short_filename}, it's not xls...")
-    #     return True
 
     print(f"Downloading {short_filename}...")
 
@@ -119,15 +115,37 @@ def print_file_report(folder, files):
     print("    ....\t....")
 
 
-def main():
+def main(args=None):
+    global DESTINATION
+
     # TODO: parse arguments
-    # TODO: determine the directory to slurp
+
+    try:
+        load_settings_file()
+    except NoConfigFoundError:
+        print("No configuration file found!")
+        print(config_file_help)
+        return 1
+
+    DESTINATION = Path(SETTINGS['local']['destination'])
+
+    # TODO: adjust this to be prettier
+    init_curl(SETTINGS['remote']['username'],
+              SETTINGS['remote']['password'])
+
     folder = choose_folder()
+
     files = get_files(folder)
     print_file_report(folder, files)
+
     choice = input("\nWould you like to continue? [Y/n]")
-    if choice == 'Y' or choice == '':
+
+    if choice.upper() == 'Y' or choice == '':
         download_files(files)
+
+    # TODO: print a report of what was done
+
+    return 0
 
 if __name__ == '__main__':
     main()

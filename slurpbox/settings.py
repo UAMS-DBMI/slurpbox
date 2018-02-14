@@ -2,6 +2,10 @@ import yaml
 from os.path import exists, expanduser
 from pprint import pprint
 
+class NoConfigFoundError(RuntimeError):
+    pass
+
+SETTINGS = {}
 
 def find_config():
     paths = [
@@ -15,12 +19,14 @@ def find_config():
         if exists(p):
             return p
 
-    raise RuntimeError("No configuration file found")
+    raise NoConfigFoundError()
 
 
-def load_config():
-    with open(find_config()) as inf:
-        return yaml.load(inf)
+def load_settings_file(filename=None):
+    global SETTINGS
 
+    if filename is None:
+        filename = find_config()
 
-SETTINGS = load_config()
+    with open(filename) as inf:
+        SETTINGS.update(yaml.load(inf))

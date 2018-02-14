@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+
+import slurpbox.main
+import sys
+
+sys.exit(slurpbox.main.main(sys.argv))
