@@ -76,7 +76,7 @@ def choose_folder():
     for i, folder in enumerate(folders):
         print(f"{i}. {folder}")
 
-    choice = input("\nPlease enter folder choice (or q to abort):")
+    choice = input("\nPlease enter folder choice (or q to abort): ")
 
     try:
         chosen = folders[int(choice)]
@@ -97,28 +97,66 @@ def get_files(folder):
         files.append(File(item['filename'],
                           item['getetag'],
                           int(item['getcontentlength'])))
-    return files
+    return set(files)
 
 def print_file_report(folder, files):
 
-    files_size = format_sizeof(sum([f.size for f in files]))
+    files_size = format_sizeof(sum([f.size for f in files]), 'B')
     files_count = len(files)
-    files_head = files[:5]
+    files_head = list(files)[:5]
 
-    print(f"You have chosen: {folder}")
-    print(f"This folder contains {files_count} files, which will "
+    print(f"This folder contains {files_count} new files, which will "
           f"consume {files_size}.")
     print("Here are the first few files:")
     for file in files_head:
-        file_size = format_sizeof(file.size)
+        file_size = format_sizeof(file.size, 'B')
         print(f"    {file_size}\t{file.path}")
+
     print("    ....\t....")
 
+def filter_existing_files(files):
+    print("Checking for existing files...")
+    existing_files = []
+    incorrect_files = []
+
+    for file in files:
+        test_filename = DESTINATION / os.path.basename(file.path)
+        if os.path.exists(test_filename):
+            print(f"\tVerifying {test_filename}...")
+            if verify_file(test_filename, file.etag):
+                existing_files.append(file)
+            else:
+                incorrect_files.append(file)
+                
+    if len(incorrect_files) > 0:
+        # TODO: print a report of what those files are
+        print("\nSome of the files you wish to download already exist "
+              "in your destination directory, however their sha1 checksum "
+              "does not match what Box has.")
+
+        print("\nThis may indicate a failed partial download, or it could be "
+              "completely different files with the same name.")
+
+        print("\nYou must provide input on how these files should be handled. "
+              "If you answer Yes, the exsiting files will be DELETED and "
+              "replaced with the contents on Box. If you answer No, "
+              "the existing files will be left in place, and the copies on "
+              "Box WILL NOT be downloaded.")
+
+        choice = input("\nWould you like to overwrite these files? [y/N] ")
+        if choice.upper() == 'N' or choice == '':
+            # If the user DOES NOT want to overwrite exsiting partial
+            # downloads, consider them "existing files" so they are
+            # excluded from the download set.
+            existing_files.extend(incorrect_files)
+
+    return set(existing_files)
 
 def main(args=None):
     global DESTINATION
 
     # TODO: parse arguments
+
 
     try:
         load_settings_file()
@@ -126,6 +164,15 @@ def main(args=None):
         print("No configuration file found!")
         print(config_file_help)
         return 1
+
+    print(f"""
+Slrupbox 1.0 - A tool for downloading files from Box.
+
+Configuration:
+    Box user: {SETTINGS['remote']['username']}
+    Destination directory: {SETTINGS['local']['destination']}
+
+""")
 
     DESTINATION = Path(SETTINGS['local']['destination'])
 
@@ -135,13 +182,24 @@ def main(args=None):
 
     folder = choose_folder()
 
-    files = get_files(folder)
-    print_file_report(folder, files)
+    print(f"\nYou have chosen: {folder}")
 
-    choice = input("\nWould you like to continue? [Y/n]")
+    files = get_files(folder)
+
+    existing_files = filter_existing_files(files)
+    files_to_download = files.difference(existing_files)
+
+    if len(files_to_download) > 0:
+        print_file_report(folder, files_to_download)
+    else:
+        print("There are no new files to download!")
+        return 0
+
+
+    choice = input("\nWould you like to continue? [Y/n] ")
 
     if choice.upper() == 'Y' or choice == '':
-        download_files(files)
+        download_files(files_to_download)
 
     # TODO: print a report of what was done
 
