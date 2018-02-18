@@ -8,7 +8,7 @@ from typing import NamedTuple
 from .xmlparse import process_xml
 from .hash import sha1sum_from_file
 from .util import format_sizeof
-from .curl import PROPFIND, download_file, init_curl
+from .http import propfind, download_file
 
 from .settings import SETTINGS, load_settings_file, NoConfigFoundError
 from .messages import config_file_help
@@ -58,7 +58,7 @@ def download_and_verify(file):
 
 def get_folders():
     buffer = BytesIO()
-    PROPFIND('dav/', buffer)
+    propfind('dav/', buffer)
 
     folders = []
     for item in process_xml(buffer.getvalue()):
@@ -87,7 +87,7 @@ def choose_folder():
 
 def get_files(folder):
     buffer = BytesIO()
-    PROPFIND(folder, buffer)
+    propfind(folder, buffer)
 
     files = []
     for item in process_xml(buffer.getvalue()):
@@ -177,8 +177,6 @@ Configuration:
     DESTINATION = Path(SETTINGS['local']['destination'])
 
     # TODO: adjust this to be prettier
-    init_curl(SETTINGS['remote']['username'],
-              SETTINGS['remote']['password'])
 
     folder = choose_folder()
 
