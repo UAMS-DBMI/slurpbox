@@ -1,2 +1,3 @@
 v1.0, 2018-02-15 -- Initial release.
 v1.1, 2018-02-17 -- Switched http functions from pycurl to requests
+v1.2, 2018-02-17 -- Removed dependency on pyyaml, switched to ConfigParser

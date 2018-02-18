@@ -166,7 +166,7 @@ def main(args=None):
         return 1
 
     print(f"""
-Slrupbox 1.0 - A tool for downloading files from Box.
+Slurpbox 1.2 - A tool for downloading files from Box.
 
 Configuration:
     Box user: {SETTINGS['remote']['username']}
