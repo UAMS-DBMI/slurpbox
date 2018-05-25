@@ -1,7 +1,7 @@
 from distutils.core import setup
 
 setup(name='slurpbox',
-      version='1.0',
+      version='1.1',
       description='Download all files from a Box.com folder',
       author='Quasar Jarosz',
       author_email='quasar@uams.edu',

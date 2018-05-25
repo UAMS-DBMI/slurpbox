@@ -1,4 +1,5 @@
 import yaml
+import argparse
 from os.path import exists, expanduser
 from pprint import pprint
 
@@ -30,3 +31,18 @@ def load_settings_file(filename=None):
 
     with open(filename) as inf:
         SETTINGS.update(yaml.load(inf))
+
+# TODO: if we change the yaml file to be flat, 
+#       we could get rid of this entirely (I think?)
+def settings_to_namespace(settings):
+    """Flatten the given settings dict into a simple Namespace object"""
+    ns = argparse.Namespace()
+    try:
+        ns.username = settings['remote']['username']
+        ns.password = settings['remote']['password']
+        ns.root_path = settings['remote']['root_path']
+        ns.local_path = settings['local']['destination']
+    except:
+        pass
+
+    return ns

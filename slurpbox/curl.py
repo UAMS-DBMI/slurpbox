@@ -1,17 +1,19 @@
 import pycurl
-from .settings import SETTINGS
 from tqdm import tqdm
 
 LOGIN = None
+BASEURL = None
 BAR = None
 BLAST = 0
 
-def init_curl(username, password):
-    global LOGIN
+def init_curl(username, password, base_url):
+    global LOGIN, BASEURL
     LOGIN = ':'.join([
         username,
         password,
     ])
+    BASEURL = base_url
+
 
 def header_func(header_line):
     header_line = header_line.decode('iso-8859-1') # from spec
@@ -36,7 +38,7 @@ def progress(download_t, download_d, upload_t, upload_d):
     BAR.update(diff)
 
 def PROPFIND(url_part, out_obj):
-    url = SETTINGS['remote']['root_path'] + url_part
+    url = BASEURL + url_part
 
     c = pycurl.Curl()
     c.setopt(c.URL, url)
@@ -54,7 +56,7 @@ def download_file(url_part, out_obj):
     global BAR
     global BLAST
 
-    url = SETTINGS['remote']['root_path'] + url_part
+    url = BASEURL + url_part
 
     c = pycurl.Curl()
     c.setopt(c.URL, url)

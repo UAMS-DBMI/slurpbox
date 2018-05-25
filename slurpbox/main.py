@@ -4,13 +4,14 @@ from io import BytesIO
 import os
 from pathlib import Path
 from typing import NamedTuple
+import argparse
 
 from .xmlparse import process_xml
 from .hash import sha1sum_from_file
 from .util import format_sizeof
 from .curl import PROPFIND, download_file, init_curl
 
-from .settings import SETTINGS, load_settings_file, NoConfigFoundError
+from .settings import SETTINGS, load_settings_file, NoConfigFoundError, settings_to_namespace
 from .messages import config_file_help
 
 DESTINATION = None
@@ -114,7 +115,7 @@ def print_file_report(folder, files):
 
     print("    ....\t....")
 
-def filter_existing_files(files):
+def filter_existing_files(files, verify=True):
     print("Checking for existing files...")
     existing_files = []
     incorrect_files = []
@@ -122,11 +123,14 @@ def filter_existing_files(files):
     for file in files:
         test_filename = DESTINATION / os.path.basename(file.path)
         if os.path.exists(test_filename):
-            print(f"\tVerifying {test_filename}...")
-            if verify_file(test_filename, file.etag):
-                existing_files.append(file)
+            if verify:
+                print(f"\tVerifying {test_filename}...")
+                if verify_file(test_filename, file.etag):
+                    existing_files.append(file)
+                else:
+                    incorrect_files.append(file)
             else:
-                incorrect_files.append(file)
+                existing_files.append(file)
                 
     if len(incorrect_files) > 0:
         # TODO: print a report of what those files are
@@ -152,41 +156,120 @@ def filter_existing_files(files):
 
     return set(existing_files)
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description='Download all files from a Box.com directory',
+        # Add more text here
+        epilog='Arguments take precedence over configuration files.',
+    )
+
+    parser.add_argument("-x", "--no-config", action="store_true",
+                        help="ignore any config files")
+
+    parser.add_argument(
+        "-n", "--no-verify", action="store_true",
+        help="do not verify existing local files, assume they are correct"
+    )
+
+    parser.add_argument(
+        "-y", "--yes", action="store_true",
+        help="do not ask if you are sure, download everything"
+    )
+
+    parser.add_argument(
+        "--username", '-u',
+        help="your Box.com username"
+    )
+    parser.add_argument(
+        "--password", '-p',
+        help="your Box.com password"
+    )
+    parser.add_argument(
+        "--remote-path", '-r',
+        help="remote path, from which all files will be downloaded"
+    )
+    parser.add_argument(
+        "--local-path", '-l',
+        help="local path, to which all downloaded files will be saved"
+    )
+
+    args = settings_to_namespace(SETTINGS)
+
+    parser.parse_args(namespace=args)
+
+    return args
+
+def verify_config(args):
+    valid = True
+    error_message = \
+        "Error: {} must be specified in config file or via arguments!"
+
+    if args.username is None:
+        valid = False
+        print(error_message.format("username"))
+    if args.password is None:
+        valid = False
+        print(error_message.format("password"))
+    if args.local_path is None:
+        valid = False
+        print(error_message.format("local path (destination)"))
+
+    if not valid:
+        print(config_file_help)
+        return False
+    else:
+        return True
+
 def main(args=None):
     global DESTINATION
 
-    # TODO: parse arguments
-
+    no_config = False
 
     try:
         load_settings_file()
     except NoConfigFoundError:
+        no_config = True
+
+    args = parse_args()
+
+    # Ignore missing config if -x is passed
+    if args.no_config:
+        no_config = False
+
+    if no_config:
         print("No configuration file found!")
         print(config_file_help)
         return 1
 
+    if not verify_config(args):
+        return 1
+
     print(f"""
-Slrupbox 1.0 - A tool for downloading files from Box.
+Slrupbox 1.1 - A tool for downloading files from Box.
 
 Configuration:
-    Box user: {SETTINGS['remote']['username']}
-    Destination directory: {SETTINGS['local']['destination']}
+    Box user: {args.username}
+    Destination directory: {args.local_path}
 
 """)
 
-    DESTINATION = Path(SETTINGS['local']['destination'])
+    DESTINATION = Path(args.local_path)
 
     # TODO: adjust this to be prettier
-    init_curl(SETTINGS['remote']['username'],
-              SETTINGS['remote']['password'])
+    init_curl(args.username,
+              args.password,
+              "https://dav.box.com/")  # hardcoded root_path for now
 
-    folder = choose_folder()
+    if args.remote_path is None:
+        folder = choose_folder()
+    else:
+        folder = args.remote_path
 
     print(f"\nYou have chosen: {folder}")
 
     files = get_files(folder)
 
-    existing_files = filter_existing_files(files)
+    existing_files = filter_existing_files(files, verify=(not args.no_verify))
     files_to_download = files.difference(existing_files)
 
     if len(files_to_download) > 0:
@@ -196,7 +279,10 @@ Configuration:
         return 0
 
 
-    choice = input("\nWould you like to continue? [Y/n] ")
+    if args.yes:
+        choice = 'Y'
+    else:
+        choice = input("\nWould you like to continue? [Y/n] ")
 
     if choice.upper() == 'Y' or choice == '':
         download_files(files_to_download)
