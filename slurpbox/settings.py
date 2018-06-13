@@ -1,12 +1,12 @@
-import yaml
 import argparse
+import configparser
 from os.path import exists, expanduser
 from pprint import pprint
 
 class NoConfigFoundError(RuntimeError):
     pass
 
-SETTINGS = {}
+SETTINGS = configparser.ConfigParser()
 
 def find_config():
     paths = [
@@ -29,8 +29,8 @@ def load_settings_file(filename=None):
     if filename is None:
         filename = find_config()
 
-    with open(filename) as inf:
-        SETTINGS.update(yaml.load(inf))
+    SETTINGS.read(filename)
+
 
 # TODO: if we change the yaml file to be flat, 
 #       we could get rid of this entirely (I think?)

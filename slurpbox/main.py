@@ -9,7 +9,7 @@ import argparse
 from .xmlparse import process_xml
 from .hash import sha1sum_from_file
 from .util import format_sizeof
-from .r import PROPFIND, download_file, init
+from .http import PROPFIND, download_file, init
 
 from .settings import SETTINGS, load_settings_file, NoConfigFoundError, settings_to_namespace
 from .messages import config_file_help
@@ -164,7 +164,7 @@ def parse_args():
     )
 
     parser.add_argument("-x", "--no-config", action="store_true",
-                        help="ignore any config files")
+                        help="continue even if config file is missing")
 
     parser.add_argument(
         "-n", "--no-verify", action="store_true",
@@ -245,7 +245,7 @@ def main(args=None):
         return 1
 
     print(f"""
-Slrupbox 1.1 - A tool for downloading files from Box.
+Slurpbox 1.3 - A tool for downloading files from Box.
 
 Configuration:
     Box user: {args.username}
