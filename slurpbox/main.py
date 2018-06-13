@@ -9,7 +9,7 @@ import argparse
 from .xmlparse import process_xml
 from .hash import sha1sum_from_file
 from .util import format_sizeof
-from .curl import PROPFIND, download_file, init_curl
+from .r import PROPFIND, download_file, init
 
 from .settings import SETTINGS, load_settings_file, NoConfigFoundError, settings_to_namespace
 from .messages import config_file_help
@@ -256,9 +256,9 @@ Configuration:
     DESTINATION = Path(args.local_path)
 
     # TODO: adjust this to be prettier
-    init_curl(args.username,
-              args.password,
-              "https://dav.box.com/")  # hardcoded root_path for now
+    init(args.username,
+         args.password,
+         "https://dav.box.com/")  # hardcoded root_path for now
 
     if args.remote_path is None:
         folder = choose_folder()
